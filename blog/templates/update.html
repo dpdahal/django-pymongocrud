@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <blockquote>
+        <h1>Update Record</h1>
+        <hr>
+        <form action="" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            Name: <input type="text" name="name"
+            value="{{ user.name }}"
+             required><br><br>
+            Email: <input type="email" 
+            value="{{ user.email }}"
+            name="email" required><br><br>
+            Phone: <input type="text" name="phone"
+            value="{{ user.phone }}"
+             required><br><br>
+            Image: <input type="file" name="image"><br><br>
+            <br>
+            {% if user.image %}
+                <img src="{{ user.image_url }}" width="80" alt="Uploaded Image">
+            {% endif %}
+            <br>
+            <button>Update Record</button>
+        </form>
+    </blockquote>
+</body>
+</html>
