@@ -1,11 +1,17 @@
 from django.shortcuts import render,redirect
 from django.http import HttpResponse
 from pathlib import Path
-from dmproject.settings import collection
+from dmproject.settings import collection, products,orders
 import os
 from bson import ObjectId  
 import random
 from django.contrib.auth.hashers import make_password, check_password
+from django.contrib import messages
+
+
+import requests
+import json
+
 
 
 def login_check(func):
@@ -16,11 +22,20 @@ def login_check(func):
             return redirect('login')
     return wrapper
 
+
 def index(request):
+    ppData = list(products.find())
+    for pp in ppData:
+        pp["id"] = str(pp["_id"])
+    return render(request, 'index.html', {'productData': ppData})
+
+
+
+def users(request):
     users = list(collection.find())
     for user in users:
         user["id"] = str(user["_id"])
-    return render(request, 'index.html', {'users': users})
+    return render(request, 'users.html', {'users': users})
 
 
 
@@ -152,3 +167,90 @@ def dashboard(request):
 def logout(request):
     request.session.flush()  # Clear session
     return redirect('login')
+
+
+
+# add product 
+def add_product(request):
+    if request.method == "POST":
+        name = request.POST.get("name")
+        price = request.POST.get("price")
+       
+        products.insert_one({
+            "name": name,
+            "price": price
+        })
+        return redirect('index')
+    else:
+        return render(request, "add_product.html")
+
+
+
+@login_check
+def order(request, id):
+    if request.method == "POST":
+        login_user = request.session.get("user")
+        name = request.POST.get("name")
+        email = request.POST.get("email")
+        quantity = request.POST.get("quantity")
+        price_cal = products.find_one({"_id": ObjectId(id)})
+        total_price = int(price_cal["price"]) * int(quantity)
+        orders.insert_one({
+            "name": name,
+            "email": email,
+            "quantity": quantity,
+            "total_price": total_price,
+            "product_id": id,
+            "user_id": login_user["id"],
+            "payment_status": "Pending",
+        })
+        last_order = orders.find_one(sort=[("_id", -1)])
+        order_id = last_order["_id"]
+
+        url = "https://dev.khalti.com/api/v2/epayment/initiate/"
+        payload = json.dumps({
+        "return_url": "http://127.0.0.1:8000/payment_success",
+        "website_url": "https://example.com/",
+        "amount": "1000",
+        "purchase_order_id": str(order_id),
+        "purchase_order_name": "test",
+        "customer_info": {
+        "name": "Ram Bahadur",
+        "email": "test@khalti.com",
+        "phone": "9800000001"
+        }
+        })
+        headers = {
+            'Authorization': 'key 116d62c8e03342c2b32192e4d9d72275',
+            'Content-Type': 'application/json',
+        }
+        response = requests.request("POST", url, headers=headers, data=payload)
+        url = response.json()["payment_url"]
+        return redirect(url)
+    else:
+        product = products.find_one({"_id": ObjectId(id)})
+        product["id"] = str(product["_id"])
+        return render(request, "order.html", {"product": product})
+   
+
+
+@login_check
+def order_list(request):
+    login_user = request.session.get("user")
+    orders_data = list(orders.find({"user_id": login_user["id"]}))
+    for order in orders_data:
+        order["id"] = str(order["_id"])
+        order["product"] = products.find_one({"_id": ObjectId(order["product_id"])})
+        order["product"]["id"] = str(order["product"]["_id"])
+
+    return render(request, "order_list.html", {"orders": orders_data})
+
+    
+
+
+@login_check
+def payment_success(request):
+    order_id = request.GET.get("purchase_order_id")
+    orders.update_one({"_id": ObjectId(order_id)}, {"$set": {"payment_status": "Success"}})
+    messages.success(request, "Payment successful!")
+    return redirect('order_list')

@@ -7,33 +7,24 @@
 </head>
 <body>
   <blockquote>
-    <h1>Users List</h1>
+    <h1>Product  List</h1>
     <hr>
     <table width="100%" border="1">
         <tr>
             <th>S.n</th>
             <th>Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Image</th>
+            <th>Price</th>
             <th>Action</th>
         </tr>
-        {% for user in users %}
+        {% for product in productData %}
         <tr>
             <td></td>
-            <td>{{ user.name }}</td>
-            <td>{{ user.email }}</td>
-            <td>{{ user.phone }}</td>
-
+            <td>{{ product.name }}</td>
+            <td>{{ product.price }}</td>
+    
             <td>
-
-                {% if user.image %}
-                <img src="{{ user.image }}" alt="Uploaded Image" width="200">
-            {% endif %}
-            </td>
-            <td>
-                <a href="{% url 'update' user.id %}">Edit</a>
-                <a href="{% url 'delete' user.id %}">Delete</a>
+                <a href="{% url 'order' product.id %}">Order Now</a>
+               
             </td>
         </tr>
         {% endfor %}
