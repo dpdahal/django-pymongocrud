@@ -254,3 +254,7 @@ def payment_success(request):
     orders.update_one({"_id": ObjectId(order_id)}, {"$set": {"payment_status": "Success"}})
     messages.success(request, "Payment successful!")
     return redirect('order_list')
+
+
+def update():
+    pass
